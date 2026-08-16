@@ -1498,7 +1498,10 @@
         "enabled": "Ativado",
         "dryRun": "Simular (S/ Modificar)",
         "notify": "Notificar",
-        "runEvery": "Executa a cada"
+        "runEvery": "Executa a cada",
+        "matchesPerRunLimit": "Limite",
+        "matchesPerRunLimitHelp": "Limita quantos itens correspondentes este workflow aciona por execução. Vazio ou 0 significa ilimitado. Expansões de grupo e cross-seed podem incluir itens relacionados adicionais.",
+        "unlimited": "Ilimitado"
       },
       "preview": {
         "confirmDeleteRule": "Confirmar Exclusão de Torrent",

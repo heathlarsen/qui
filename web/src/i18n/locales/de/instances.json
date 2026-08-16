@@ -1498,7 +1498,10 @@
         "enabled": "Aktiviert",
         "dryRun": "Probelauf",
         "notify": "Benachrichtigen",
-        "runEvery": "Ausführen alle"
+        "runEvery": "Ausführen alle",
+        "matchesPerRunLimit": "Limit",
+        "matchesPerRunLimitHelp": "Begrenzt, auf wie viele passende Elemente dieser Workflow pro Lauf wirkt. Leer oder 0 bedeutet unbegrenzt. Gruppen- und Cross-Seed-Erweiterungen können zusätzliche verwandte Elemente einschließen.",
+        "unlimited": "Unbegrenzt"
       },
       "preview": {
         "confirmDeleteRule": "Löschregel bestätigen",

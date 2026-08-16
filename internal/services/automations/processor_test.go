@@ -249,6 +249,38 @@ func TestProcessTorrents_GroupConditionWithoutGroupID_UsesDefaultFallback(t *tes
 	require.Contains(t, states, "b")
 }
 
+func TestProcessTorrents_MaxProcessedPerRunCapsAppliedRuleMatches(t *testing.T) {
+	sm := qbittorrent.NewSyncManager(nil, nil)
+	upload := int64(64)
+	maxProcessed := 2
+	torrents := []qbt.Torrent{
+		{Hash: "a", Name: "A", AddedOn: 1},
+		{Hash: "b", Name: "B", AddedOn: 2},
+		{Hash: "c", Name: "C", AddedOn: 3},
+	}
+	rule := &models.Automation{
+		ID:                 20,
+		Enabled:            true,
+		TrackerPattern:     "*",
+		MaxProcessedPerRun: &maxProcessed,
+		Conditions: &models.ActionConditions{
+			SchemaVersion: "1",
+			SpeedLimits: &models.SpeedLimitAction{
+				Enabled:   true,
+				UploadKiB: &upload,
+			},
+		},
+	}
+	processedCounts := make(map[int]int)
+
+	states := processTorrents(torrents, []*models.Automation{rule}, nil, sm, nil, nil, nil, processedCounts)
+
+	require.Contains(t, states, "a")
+	require.Contains(t, states, "b")
+	require.NotContains(t, states, "c")
+	require.Equal(t, 2, processedCounts[rule.ID])
+}
+
 func TestMoveSkippedWhenAlreadyInTargetPath(t *testing.T) {
 	// Test that move is skipped when torrent is already in the target path
 	torrent := qbt.Torrent{

@@ -1498,7 +1498,10 @@
         "enabled": "Enabled",
         "dryRun": "Dry run",
         "notify": "Notify",
-        "runEvery": "Run every"
+        "runEvery": "Run every",
+        "matchesPerRunLimit": "Limit",
+        "matchesPerRunLimitHelp": "Limits how many matching items this workflow acts on per run. Empty or 0 means unlimited. Group and cross-seed expansions may include additional related items.",
+        "unlimited": "Unlimited"
       },
       "preview": {
         "confirmDeleteRule": "Confirm Delete Rule",

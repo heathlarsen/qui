@@ -343,6 +343,8 @@ No-match behavior:
 
 By default, torrents matched by an automation are processed oldest-first. However, you can customize the **Torrent Priority** to control exactly which torrents are processed first. This is useful for actions like **Delete** combined with **Free Space**, where the priority determines which torrents are removed first to free up space.
 
+You can also set **Matches per run limit** to limit how many matching items the workflow acts on in a single run. Leave it empty or set it to `0` for unlimited processing. The limit is applied after torrent priority sorting, so priority decides which matches are selected first. Group-aware and cross-seed-aware expansions may include additional related items after a primary match is selected, preserving atomic delete, move, and category behavior.
+
 ### Priority Types
 
 | Type       | Description                                                                                                                                  |
@@ -990,6 +992,7 @@ Only sends API calls when the torrent's current setting differs from the desired
 - **First match wins** for delete actions (delete ends torrent processing, no further rules evaluated)
 - **Last rule wins** for speed limits, share limits, category, external program, and export to instance actions
 - **Accumulative** for tag actions (tags are combined across matching rules)
+- **Matches per run limit** is applied after priority sorting and before action execution; group and cross-seed expansions may add related items beyond the primary match count.
 
 ### Free Space Condition Behavior
 

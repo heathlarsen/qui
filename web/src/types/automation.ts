@@ -321,6 +321,7 @@ export interface Automation {
   notify: boolean
   sortOrder: number
   intervalSeconds?: number | null // null = use global default (15 minutes)
+  maxProcessedPerRun?: number | null // null/0 = unlimited
   createdAt?: string
   updatedAt?: string
 }
@@ -337,6 +338,7 @@ export interface AutomationInput {
   notify?: boolean
   sortOrder?: number
   intervalSeconds?: number | null // null = use global default (15 minutes)
+  maxProcessedPerRun?: number | null // null/0 = unlimited
 }
 
 export type PreviewView = "needed" | "eligible"

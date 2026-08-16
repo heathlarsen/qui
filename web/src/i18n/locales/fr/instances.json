@@ -1492,7 +1492,10 @@
         "enabled": "Activé",
         "dryRun": "Simulation (Dry run)",
         "notify": "Notifier",
-        "runEvery": "Exécuter chaque"
+        "runEvery": "Exécuter chaque",
+        "matchesPerRunLimit": "Limite",
+        "matchesPerRunLimitHelp": "Limite le nombre d'éléments correspondants sur lesquels ce workflow agit à chaque exécution. Vide ou 0 signifie illimité. Les extensions de groupe et de cross-seed peuvent inclure des éléments liés supplémentaires.",
+        "unlimited": "Illimité"
       },
       "preview": {
         "confirmDeleteRule": "Confirmer la règle de suppression",

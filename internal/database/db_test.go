@@ -284,6 +284,7 @@ var expectedSchema = map[string][]columnSpec{
 		{Name: "updated_at", Type: "DATETIME"},
 		{Name: "sorting_config", Type: "TEXT"},
 		{Name: "notify", Type: "INTEGER"},
+		{Name: "max_processed_per_run", Type: "INTEGER"},
 	},
 	"automation_activity": {
 		{Name: "id", Type: "INTEGER", PrimaryKey: true},

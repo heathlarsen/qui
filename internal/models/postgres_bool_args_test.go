@@ -480,6 +480,7 @@ func TestAutomationReadsIntegerBooleanColumns(t *testing.T) {
 			notify INTEGER NOT NULL DEFAULT 1,
 			sort_order INTEGER NOT NULL DEFAULT 0,
 			interval_seconds INTEGER,
+			max_processed_per_run INTEGER,
 			free_space_source TEXT,
 			sorting_config TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

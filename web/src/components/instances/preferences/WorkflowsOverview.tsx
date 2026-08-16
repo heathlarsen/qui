@@ -484,6 +484,7 @@ export function WorkflowsOverview({
         dryRun: true,
         sortOrder: rule.sortOrder,
         intervalSeconds: rule.intervalSeconds ?? null,
+        maxProcessedPerRun: rule.maxProcessedPerRun ?? null,
       }
       return api.dryRunAutomation(instanceId, payload)
     },

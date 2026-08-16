@@ -71,6 +71,12 @@ describe("toExportFormat", () => {
     expect(toExportFormat(makeAutomation({ intervalSeconds: 60 })).intervalSeconds).toBe(60)
   })
 
+  it("includes maxProcessedPerRun only when positive", () => {
+    expect(toExportFormat(makeAutomation({ maxProcessedPerRun: 5 })).maxProcessedPerRun).toBe(5)
+    expect(toExportFormat(makeAutomation({ maxProcessedPerRun: 0 }))).not.toHaveProperty("maxProcessedPerRun")
+    expect(toExportFormat(makeAutomation({ maxProcessedPerRun: null }))).not.toHaveProperty("maxProcessedPerRun")
+  })
+
   it("emits dryRun: true only when set; omits the field otherwise", () => {
     expect(toExportFormat(makeAutomation({ dryRun: true })).dryRun).toBe(true)
     expect(toExportFormat(makeAutomation({ dryRun: false }))).not.toHaveProperty("dryRun")
@@ -130,6 +136,11 @@ describe("fromImportFormat", () => {
   it("includes intervalSeconds only when present and not equal to default", () => {
     expect(fromImportFormat(baseExport({ intervalSeconds: 900 }), [])).not.toHaveProperty("intervalSeconds")
     expect(fromImportFormat(baseExport({ intervalSeconds: 60 }), []).intervalSeconds).toBe(60)
+  })
+
+  it("includes maxProcessedPerRun only when positive", () => {
+    expect(fromImportFormat(baseExport({ maxProcessedPerRun: 5 }), []).maxProcessedPerRun).toBe(5)
+    expect(fromImportFormat(baseExport({ maxProcessedPerRun: 0 }), [])).not.toHaveProperty("maxProcessedPerRun")
   })
 })
 
@@ -256,6 +267,24 @@ describe("parseImportJSON", () => {
       intervalSeconds: 30,
     }))
     expect(tooSmall.data?.intervalSeconds).toBeUndefined()
+  })
+
+  it("includes maxProcessedPerRun only when it's positive", () => {
+    const limited = parseImportJSON(JSON.stringify({
+      name: "x",
+      conditions: { schemaVersion: "1" },
+      trackerDomains: [],
+      maxProcessedPerRun: 3.8,
+    }))
+    expect(limited.data?.maxProcessedPerRun).toBe(3)
+
+    const unlimited = parseImportJSON(JSON.stringify({
+      name: "x",
+      conditions: { schemaVersion: "1" },
+      trackerDomains: [],
+      maxProcessedPerRun: 0,
+    }))
+    expect(unlimited.data?.maxProcessedPerRun).toBeUndefined()
   })
 
   it("includes notify only when it's an explicit boolean", () => {

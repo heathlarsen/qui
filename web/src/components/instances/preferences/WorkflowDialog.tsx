@@ -447,6 +447,7 @@ type FormState = {
   notify: boolean
   sortOrder?: number
   intervalSeconds: number | null // null = use global default (15m)
+  maxProcessedPerRun: number | null // null/0 = unlimited
   // Shared condition for all actions
   actionCondition: RuleCondition | null
   // Grouping settings (advanced)
@@ -525,6 +526,7 @@ const emptyFormState: FormState = {
   dryRun: false,
   notify: true,
   intervalSeconds: null,
+  maxProcessedPerRun: null,
   actionCondition: null,
   exprGrouping: undefined,
   speedLimitsEnabled: false,
@@ -1177,6 +1179,7 @@ export function WorkflowDialog({ open, onOpenChange, instanceId, rule, onSuccess
           notify: rule.notify ?? true,
           sortOrder: rule.sortOrder,
           intervalSeconds: rule.intervalSeconds ?? null,
+          maxProcessedPerRun: rule.maxProcessedPerRun ?? null,
           actionCondition,
           exprGrouping,
           speedLimitsEnabled,
@@ -1604,6 +1607,7 @@ export function WorkflowDialog({ open, onOpenChange, instanceId, rule, onSuccess
       notify: input.notify,
       sortOrder: input.sortOrder,
       intervalSeconds: input.intervalSeconds,
+      maxProcessedPerRun: input.maxProcessedPerRun && input.maxProcessedPerRun > 0 ? input.maxProcessedPerRun : null,
       conditions,
       freeSpaceSource,
       sortingConfig,
@@ -4137,6 +4141,27 @@ export function WorkflowDialog({ open, onOpenChange, instanceId, rule, onSuccess
                   {deleteUsesFreeSpace && formState.intervalSeconds === 60 && (
                     <span className="text-xs text-yellow-500">{t("preferences.workflowDialog.interval.cooldownWarning")}</span>
                   )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="rule-max-processed" className="text-sm font-normal text-muted-foreground whitespace-nowrap">
+                    {t("preferences.workflowDialog.footer.matchesPerRunLimit")}
+                  </Label>
+                  <FieldHelp>{t("preferences.workflowDialog.footer.matchesPerRunLimitHelp")}</FieldHelp>
+                  <Input
+                    id="rule-max-processed"
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    className="h-8 w-24"
+                    value={formState.maxProcessedPerRun ?? ""}
+                    placeholder={t("preferences.workflowDialog.footer.unlimited")}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      const next = raw === "" ? null : Math.max(0, Math.floor(Number(raw) || 0))
+                      setFormState(prev => ({ ...prev, maxProcessedPerRun: next }))
+                    }}
+                  />
                 </div>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">

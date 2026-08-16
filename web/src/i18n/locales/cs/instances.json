@@ -1498,7 +1498,10 @@
         "enabled": "Povoleno",
         "dryRun": "Simulace",
         "notify": "Notifikace",
-        "runEvery": "Spustit každý"
+        "runEvery": "Spustit každý",
+        "matchesPerRunLimit": "Limit",
+        "matchesPerRunLimitHelp": "Omezuje počet odpovídajících položek, na které workflow při jednom spuštění působí. Prázdné nebo 0 znamená bez omezení. Rozšíření skupin a cross-seedů může zahrnout další související položky.",
+        "unlimited": "Bez omezení"
       },
       "preview": {
         "confirmDeleteRule": "Potvrdit smazání pravidla",

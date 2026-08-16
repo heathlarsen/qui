@@ -42,20 +42,21 @@ func NewAutomationHandler(store *models.AutomationStore, activityStore *models.A
 }
 
 type AutomationPayload struct {
-	Name            string                   `json:"name"`
-	TrackerPattern  string                   `json:"trackerPattern"`
-	TrackerDomains  []string                 `json:"trackerDomains"`
-	Enabled         *bool                    `json:"enabled"`
-	DryRun          *bool                    `json:"dryRun"`
-	Notify          *bool                    `json:"notify"`
-	SortOrder       *int                     `json:"sortOrder"`
-	IntervalSeconds *int                     `json:"intervalSeconds,omitempty"` // nil = use DefaultRuleInterval (15m)
-	Conditions      *models.ActionConditions `json:"conditions"`
-	FreeSpaceSource *models.FreeSpaceSource  `json:"freeSpaceSource,omitempty"` // nil = default qBittorrent free space
-	SortingConfig   *models.SortingConfig    `json:"sortingConfig,omitempty"`   // nil = default (oldest first)
-	PreviewLimit    *int                     `json:"previewLimit"`
-	PreviewOffset   *int                     `json:"previewOffset"`
-	PreviewView     string                   `json:"previewView,omitempty"` // "needed" (default) or "eligible"
+	Name               string                   `json:"name"`
+	TrackerPattern     string                   `json:"trackerPattern"`
+	TrackerDomains     []string                 `json:"trackerDomains"`
+	Enabled            *bool                    `json:"enabled"`
+	DryRun             *bool                    `json:"dryRun"`
+	Notify             *bool                    `json:"notify"`
+	SortOrder          *int                     `json:"sortOrder"`
+	IntervalSeconds    *int                     `json:"intervalSeconds,omitempty"`    // nil = use DefaultRuleInterval (15m)
+	MaxProcessedPerRun *int                     `json:"maxProcessedPerRun,omitempty"` // nil = unlimited
+	Conditions         *models.ActionConditions `json:"conditions"`
+	FreeSpaceSource    *models.FreeSpaceSource  `json:"freeSpaceSource,omitempty"` // nil = default qBittorrent free space
+	SortingConfig      *models.SortingConfig    `json:"sortingConfig,omitempty"`   // nil = default (oldest first)
+	PreviewLimit       *int                     `json:"previewLimit"`
+	PreviewOffset      *int                     `json:"previewOffset"`
+	PreviewView        string                   `json:"previewView,omitempty"` // "needed" (default) or "eligible"
 }
 
 type AutomationDryRunResult struct {
@@ -75,18 +76,19 @@ func (p *AutomationPayload) toModel(instanceID int, id int) *models.Automation {
 	}
 
 	automation := &models.Automation{
-		ID:              id,
-		InstanceID:      instanceID,
-		Name:            p.Name,
-		TrackerPattern:  trackerPattern,
-		TrackerDomains:  normalizedDomains,
-		Conditions:      p.Conditions,
-		FreeSpaceSource: p.FreeSpaceSource,
-		SortingConfig:   p.SortingConfig,
-		Enabled:         true,
-		DryRun:          false,
-		Notify:          true,
-		IntervalSeconds: p.IntervalSeconds,
+		ID:                 id,
+		InstanceID:         instanceID,
+		Name:               p.Name,
+		TrackerPattern:     trackerPattern,
+		TrackerDomains:     normalizedDomains,
+		Conditions:         p.Conditions,
+		FreeSpaceSource:    p.FreeSpaceSource,
+		SortingConfig:      p.SortingConfig,
+		Enabled:            true,
+		DryRun:             false,
+		Notify:             true,
+		IntervalSeconds:    p.IntervalSeconds,
+		MaxProcessedPerRun: p.MaxProcessedPerRun,
 	}
 	if p.Enabled != nil {
 		automation.Enabled = *p.Enabled
@@ -336,6 +338,10 @@ func (h *AutomationHandler) validatePayload(ctx context.Context, instanceID int,
 		return http.StatusBadRequest, "At least one action must be configured", errors.New("conditions required")
 	}
 	payload.Conditions.Normalize()
+
+	if payload.MaxProcessedPerRun != nil && *payload.MaxProcessedPerRun < 0 {
+		return http.StatusBadRequest, "Max processed per run must be 0 or greater", errors.New("max processed per run invalid")
+	}
 
 	// Validate category action has a category name
 	if payload.Conditions.Category != nil && payload.Conditions.Category.Enabled && payload.Conditions.Category.Category == "" {

@@ -2252,9 +2252,10 @@ func (s *Service) applyRulesForInstance(ctx context.Context, instanceID int, for
 	// Process all torrents through all eligible rules, batching by sort order
 	ruleStats := make(map[int]*ruleRunStats)
 	states := make(map[string]*torrentDesiredState)
+	processedCounts := make(map[int]int)
 
 	// Group rules into batches based on sorting config equality
-	s.buildAndExecuteBatches(instanceID, eligibleRules, torrents, evalCtx, skipCheck, ruleStats, states)
+	s.buildAndExecuteBatches(instanceID, eligibleRules, torrents, evalCtx, skipCheck, ruleStats, states, processedCounts)
 
 	if len(states) == 0 {
 		log.Trace().
@@ -6561,9 +6562,14 @@ func executeBatch(
 	skipCheck func(hash string) bool,
 	ruleStats map[int]*ruleRunStats,
 	states map[string]*torrentDesiredState,
+	processedCountsArg ...map[int]int,
 ) {
 	if len(currentBatch) == 0 {
 		return
+	}
+	var processedCounts map[int]int
+	if len(processedCountsArg) > 0 {
+		processedCounts = processedCountsArg[0]
 	}
 
 	// 1. Sort torrents based on this batch's configuration
@@ -6572,7 +6578,7 @@ func executeBatch(
 	SortTorrentsWithFallback(torrents, currentBatch[0].SortingConfig, evalCtx, instanceID, currentBatch[0].Name)
 
 	// 2. Process rules
-	processTorrents(torrents, currentBatch, evalCtx, sm, skipCheck, ruleStats, states)
+	processTorrents(torrents, currentBatch, evalCtx, sm, skipCheck, ruleStats, states, processedCounts)
 }
 
 func (s *Service) buildAndExecuteBatches(
@@ -6583,6 +6589,7 @@ func (s *Service) buildAndExecuteBatches(
 	skipCheck func(hash string) bool,
 	ruleStats map[int]*ruleRunStats,
 	states map[string]*torrentDesiredState,
+	processedCounts map[int]int,
 ) {
 	if len(eligibleRules) == 0 {
 		return
@@ -6597,14 +6604,14 @@ func (s *Service) buildAndExecuteBatches(
 			currentBatch = append(currentBatch, rule)
 		} else {
 			// Execute current batch
-			executeBatch(instanceID, currentBatch, torrents, evalCtx, s.syncManager, skipCheck, ruleStats, states)
+			executeBatch(instanceID, currentBatch, torrents, evalCtx, s.syncManager, skipCheck, ruleStats, states, processedCounts)
 			// Start new batch
 			currentBatch = []*models.Automation{rule}
 		}
 	}
 	// Execute final batch
 	if len(currentBatch) > 0 {
-		executeBatch(instanceID, currentBatch, torrents, evalCtx, s.syncManager, skipCheck, ruleStats, states)
+		executeBatch(instanceID, currentBatch, torrents, evalCtx, s.syncManager, skipCheck, ruleStats, states, processedCounts)
 	}
 }
 

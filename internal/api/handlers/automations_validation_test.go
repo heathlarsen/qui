@@ -197,6 +197,31 @@ func TestValidateFreeSpaceSource(t *testing.T) {
 	}
 }
 
+func TestValidatePayloadRejectsNegativeMaxProcessedPerRun(t *testing.T) {
+	h := &AutomationHandler{}
+	maxProcessed := -1
+	payload := &AutomationPayload{
+		Name:               "limited",
+		TrackerPattern:     "*",
+		MaxProcessedPerRun: &maxProcessed,
+		Conditions: &models.ActionConditions{
+			Pause: &models.PauseAction{Enabled: true},
+		},
+	}
+
+	status, msg, err := h.validatePayload(context.Background(), 1, payload)
+
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", status, http.StatusBadRequest)
+	}
+	if !strings.Contains(msg, "Max processed per run") {
+		t.Fatalf("message = %q, want max processed per run error", msg)
+	}
+}
+
 // TestValidateFreeSpaceSource_PlatformSpecific tests path source validation on different platforms.
 // On Windows, path-based free space is not supported and returns 400.
 // On other platforms, it's valid when local filesystem access is enabled.

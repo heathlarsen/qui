@@ -1479,7 +1479,10 @@
         "enabled": "已启用",
         "dryRun": "模拟运行",
         "notify": "通知",
-        "runEvery": "运行间隔"
+        "runEvery": "运行间隔",
+        "matchesPerRunLimit": "限制",
+        "matchesPerRunLimitHelp": "限制此工作流每次运行会处理的匹配项数量。留空或 0 表示不限制。分组和 cross-seed 扩展可能包含额外相关项。",
+        "unlimited": "不限制"
       },
       "preview": {
         "confirmDeleteRule": "确认删除规则",

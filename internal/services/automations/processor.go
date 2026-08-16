@@ -192,7 +192,12 @@ func processTorrents(
 	skipCheck func(hash string) bool,
 	stats map[int]*ruleRunStats,
 	existingStates map[string]*torrentDesiredState,
+	processedCountsArg ...map[int]int,
 ) map[string]*torrentDesiredState {
+	var processedCounts map[int]int
+	if len(processedCountsArg) > 0 {
+		processedCounts = processedCountsArg[0]
+	}
 	var states map[string]*torrentDesiredState
 	if existingStates != nil {
 		states = existingStates
@@ -237,11 +242,16 @@ func processTorrents(
 				// Once delete is triggered, stop processing further rules
 				break
 			}
+			if ruleProcessingLimitReached(rule, processedCounts) {
+				continue
+			}
 			ruleStats := getOrCreateRuleStats(stats, rule)
 			if ruleStats != nil {
 				ruleStats.MatchedTrackers++
 			}
-			processRuleForTorrent(rule, torrent, state, evalCtx, sm, crossSeedIndex, ruleStats, torrents, cpIndex)
+			if processRuleForTorrent(rule, torrent, state, evalCtx, sm, crossSeedIndex, ruleStats, torrents, cpIndex) {
+				incrementRuleProcessedCount(rule, processedCounts)
+			}
 		}
 
 		// Only store if there are actions to take
@@ -258,11 +268,29 @@ func processTorrents(
 	return states
 }
 
+func ruleProcessingLimitReached(rule *models.Automation, processedCounts map[int]int) bool {
+	if rule == nil || rule.MaxProcessedPerRun == nil || *rule.MaxProcessedPerRun <= 0 {
+		return false
+	}
+	if processedCounts == nil {
+		return false
+	}
+	return processedCounts[rule.ID] >= *rule.MaxProcessedPerRun
+}
+
+func incrementRuleProcessedCount(rule *models.Automation, processedCounts map[int]int) {
+	if rule == nil || processedCounts == nil {
+		return
+	}
+	processedCounts[rule.ID]++
+}
+
 // processRuleForTorrent applies a single rule to the torrent state.
-func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *torrentDesiredState, evalCtx *EvalContext, sm *qbittorrent.SyncManager, crossSeedIndex map[crossSeedKey][]qbt.Torrent, stats *ruleRunStats, allTorrents []qbt.Torrent, cpIndex contentPathIndex) {
+func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *torrentDesiredState, evalCtx *EvalContext, sm *qbittorrent.SyncManager, crossSeedIndex map[crossSeedKey][]qbt.Torrent, stats *ruleRunStats, allTorrents []qbt.Torrent, cpIndex contentPathIndex) bool {
+	processed := false
 	conditions := rule.Conditions
 	if conditions == nil {
-		return
+		return false
 	}
 
 	// Load the rule's free space source state before evaluating any conditions.
@@ -282,6 +310,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.SpeedLimits.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.SpeedApplied++
 			}
@@ -304,6 +333,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.ShareLimits.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.ShareApplied++
 			}
@@ -334,6 +364,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.Pause.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.PauseApplied++
 			}
@@ -356,6 +387,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.Resume.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.ResumeApplied++
 			}
@@ -379,6 +411,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.Recheck.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.RecheckApplied++
 			}
@@ -400,6 +433,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.Reannounce.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.ReannounceApplied++
 			}
@@ -416,6 +450,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.AutoManagement.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.AutoManageApplied++
 			}
@@ -444,7 +479,10 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			}
 			continue
 		}
-		matches := processTagAction(rule, tagAction, torrent, state, evalCtx)
+		matches, changed := processTagAction(rule, tagAction, torrent, state, evalCtx)
+		if changed {
+			processed = true
+		}
 		if stats != nil {
 			if matches {
 				stats.TagConditionMet++
@@ -461,6 +499,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 
 		// Apply category change only if condition matches AND not blocked by cross-seed protection
 		if shouldApply && !shouldBlockCategoryChangeForCrossSeeds(torrent, conditions.Category.BlockIfCrossSeedInCategories, crossSeedIndex) {
+			processed = true
 			if stats != nil {
 				stats.CategoryApplied++
 			}
@@ -484,6 +523,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.ExternalProgram.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.ExternalProgramApplied++
 			}
@@ -501,6 +541,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 			EvaluateConditionWithContext(conditions.ExportToInstance.Condition, torrent, evalCtx, 0)
 
 		if shouldApply {
+			processed = true
 			if stats != nil {
 				stats.ExportToInstanceApplied++
 			}
@@ -522,6 +563,7 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 		} else {
 			shouldApply := EvaluateConditionWithContext(conditions.Delete.Condition, torrent, evalCtx, 0)
 			if shouldApply {
+				processed = true
 				if stats != nil {
 					stats.DeleteApplied++
 				}
@@ -551,17 +593,20 @@ func processRuleForTorrent(rule *models.Automation, torrent qbt.Torrent, state *
 
 	// Move (first rule to trigger wins - skip if already set)
 	if conditions.Move != nil && conditions.Move.Enabled && !state.shouldMove {
-		evaluateMoveAction(rule, conditions.Move, torrent, evalCtx, crossSeedIndex, stats, state)
+		if evaluateMoveAction(rule, conditions.Move, torrent, evalCtx, crossSeedIndex, stats, state) {
+			processed = true
+		}
 	}
+	return processed
 }
 
-func evaluateMoveAction(rule *models.Automation, action *models.MoveAction, torrent qbt.Torrent, evalCtx *EvalContext, crossSeedIndex map[crossSeedKey][]qbt.Torrent, stats *ruleRunStats, state *torrentDesiredState) {
+func evaluateMoveAction(rule *models.Automation, action *models.MoveAction, torrent qbt.Torrent, evalCtx *EvalContext, crossSeedIndex map[crossSeedKey][]qbt.Torrent, stats *ruleRunStats, state *torrentDesiredState) bool {
 	resolvedPath, pathValid := resolveMovePath(action.Path, torrent, state, evalCtx)
 	if !pathValid {
 		if stats != nil {
 			stats.MoveConditionNotMet++
 		}
-		return
+		return false
 	}
 
 	conditionMet := action.Condition == nil ||
@@ -589,10 +634,10 @@ func evaluateMoveAction(rule *models.Automation, action *models.MoveAction, torr
 			state.moveRuleName = rule.Name
 			state.moveRule = ruleRef{id: rule.ID, name: rule.Name}
 		}
-		return
+		return true
 	}
 	if stats == nil {
-		return
+		return false
 	}
 
 	switch {
@@ -603,6 +648,7 @@ func evaluateMoveAction(rule *models.Automation, action *models.MoveAction, torr
 	default:
 		stats.MoveBlockedByCrossSeed++
 	}
+	return false
 }
 
 func shouldBlockCategoryChangeForCrossSeeds(torrent qbt.Torrent, protectedCategories []string, crossSeedIndex map[crossSeedKey][]qbt.Torrent) bool {
@@ -737,7 +783,7 @@ func buildCrossSeedIndex(torrents []qbt.Torrent) map[crossSeedKey][]qbt.Torrent 
 }
 
 // processTagAction handles tag add/remove logic for a single tag action.
-func processTagAction(rule *models.Automation, tagAction *models.TagAction, torrent qbt.Torrent, state *torrentDesiredState, evalCtx *EvalContext) bool {
+func processTagAction(rule *models.Automation, tagAction *models.TagAction, torrent qbt.Torrent, state *torrentDesiredState, evalCtx *EvalContext) (bool, bool) {
 	tagMode := tagAction.Mode
 	if tagMode == "" {
 		tagMode = models.TagModeFull
@@ -749,6 +795,7 @@ func processTagAction(rule *models.Automation, tagAction *models.TagAction, torr
 	// Evaluate condition
 	matchesCondition := tagAction.Condition == nil ||
 		EvaluateConditionWithContext(tagAction.Condition, torrent, evalCtx, 0)
+	changed := false
 
 	// Determine tags to manage - either from static list or derived from tracker
 	tagsToManage := tagAction.Tags
@@ -782,6 +829,7 @@ func processTagAction(rule *models.Automation, tagAction *models.TagAction, torr
 		case models.TagModeAdd:
 			if !hasTag && matchesCondition {
 				state.tagActions[managedTag] = "add"
+				changed = true
 				if rule != nil {
 					state.tagRuleByTag[managedTag] = ruleRef{id: rule.ID, name: rule.Name}
 				}
@@ -789,6 +837,7 @@ func processTagAction(rule *models.Automation, tagAction *models.TagAction, torr
 		case models.TagModeRemove:
 			if hasTag && matchesCondition {
 				state.tagActions[managedTag] = "remove"
+				changed = true
 				if rule != nil {
 					state.tagRuleByTag[managedTag] = ruleRef{id: rule.ID, name: rule.Name}
 				}
@@ -796,11 +845,13 @@ func processTagAction(rule *models.Automation, tagAction *models.TagAction, torr
 		default: // full (incl. unknown/empty)
 			if !hasTag && matchesCondition {
 				state.tagActions[managedTag] = "add"
+				changed = true
 				if rule != nil {
 					state.tagRuleByTag[managedTag] = ruleRef{id: rule.ID, name: rule.Name}
 				}
 			} else if hasTag && !matchesCondition {
 				state.tagActions[managedTag] = "remove"
+				changed = true
 				if rule != nil {
 					state.tagRuleByTag[managedTag] = ruleRef{id: rule.ID, name: rule.Name}
 				}
@@ -808,7 +859,7 @@ func processTagAction(rule *models.Automation, tagAction *models.TagAction, torr
 		}
 	}
 
-	return matchesCondition
+	return matchesCondition, changed
 }
 
 // hasActions returns true if the state has any actions to execute.

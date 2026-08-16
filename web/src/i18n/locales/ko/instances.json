@@ -1479,7 +1479,10 @@
         "enabled": "활성화됨",
         "dryRun": "모의 실행",
         "notify": "알림",
-        "runEvery": "실행 주기"
+        "runEvery": "실행 주기",
+        "matchesPerRunLimit": "제한",
+        "matchesPerRunLimitHelp": "이 워크플로가 실행당 작업할 일치 항목 수를 제한합니다. 비워 두거나 0이면 제한이 없습니다. 그룹 및 cross-seed 확장으로 관련 항목이 추가로 포함될 수 있습니다.",
+        "unlimited": "무제한"
       },
       "preview": {
         "confirmDeleteRule": "삭제 규칙 확인",

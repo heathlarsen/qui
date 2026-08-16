@@ -12,6 +12,7 @@ export type TrackerMatchMode = "include" | "exclude" | "mixed"
  * - Includes trackerDomains (primary) and derived trackerPattern
  * - Omits id, instanceId, sortOrder, enabled
  * - Omits intervalSeconds when it equals default 900
+ * - Omits maxProcessedPerRun when unset or unlimited
  */
 export interface WorkflowExport {
   name: string
@@ -20,6 +21,7 @@ export interface WorkflowExport {
   conditions: ActionConditions
   sortingConfig?: SortingConfig
   intervalSeconds?: number
+  maxProcessedPerRun?: number
   dryRun?: boolean
   notify?: boolean
 }
@@ -46,6 +48,10 @@ export function toExportFormat(workflow: Automation): WorkflowExport {
   // Only include intervalSeconds if it differs from default
   if (workflow.intervalSeconds && workflow.intervalSeconds !== DEFAULT_INTERVAL_SECONDS) {
     exported.intervalSeconds = workflow.intervalSeconds
+  }
+
+  if (workflow.maxProcessedPerRun && workflow.maxProcessedPerRun > 0) {
+    exported.maxProcessedPerRun = workflow.maxProcessedPerRun
   }
 
   if (workflow.dryRun) {
@@ -130,6 +136,10 @@ export function fromImportFormat(
   // Include intervalSeconds if specified and differs from default
   if (data.intervalSeconds && data.intervalSeconds !== DEFAULT_INTERVAL_SECONDS) {
     input.intervalSeconds = data.intervalSeconds
+  }
+
+  if (data.maxProcessedPerRun && data.maxProcessedPerRun > 0) {
+    input.maxProcessedPerRun = data.maxProcessedPerRun
   }
 
   return input
@@ -226,6 +236,10 @@ export function parseImportJSON(jsonString: string): { data: WorkflowExport; err
   // Optional intervalSeconds
   if (typeof obj.intervalSeconds === "number" && obj.intervalSeconds >= 60) {
     data.intervalSeconds = obj.intervalSeconds
+  }
+
+  if (typeof obj.maxProcessedPerRun === "number" && obj.maxProcessedPerRun > 0) {
+    data.maxProcessedPerRun = Math.floor(obj.maxProcessedPerRun)
   }
 
   if (typeof obj.notify === "boolean") {
